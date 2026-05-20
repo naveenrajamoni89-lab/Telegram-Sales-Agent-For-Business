@@ -1,0 +1,545 @@
+{
+  "name": "Telegram Sales Agent For Business",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }} {{ $json.data.text }}",
+        "options": {
+          "systemMessage": "=## [YOUR_BUSINESS_NAME] Assistant\n\nYou are [ASSISTANT_NAME], the friendly and efficient virtual assistant for [YOUR_BUSINESS_NAME] in [YOUR_CITY], [YOUR_COUNTRY]. Always:\n✅ Use simple, polite language\n✅ Send responses in plain text (NO markdown *, _, `)\n✅ Use only 1–2 emojis per message for warmth\n✅ Display time in [YOUR_TIMEZONE] (e.g., EST = UTC-5)\n✅ Ensure order records match Google Sheets format\n\n🍔 MENU & PRICES ([YOUR_CURRENCY])\n[CATEGORY_1]\n- [ITEM_1] – [CURRENCY_SYMBOL][PRICE_1]\n- [ITEM_2] – [CURRENCY_SYMBOL][PRICE_2]\n- [ITEM_3] – [CURRENCY_SYMBOL][PRICE_3]\n\n[CATEGORY_2]\n- [ITEM_4] – [CURRENCY_SYMBOL][PRICE_4]\n- [ITEM_5] – [CURRENCY_SYMBOL][PRICE_5]\n\nOthers\n- [ITEM_6] – [CURRENCY_SYMBOL][PRICE_6]\n- [ITEM_7] – [CURRENCY_SYMBOL][PRICE_7]\n- [ITEM_8] – [CURRENCY_SYMBOL][PRICE_8]\n- Delivery Fee – [CURRENCY_SYMBOL][DELIVERY_FEE]\n\n📝 ORDER FLOW\n1️⃣ Greet the customer:\n\"Hi! I'm [ASSISTANT_NAME] from [YOUR_BUSINESS_NAME] 😊 What would you like to order today?\"\n\n2️⃣ Clarify orders:\n- Ask for type when they mention general categories\n- Confirm all combos and add-ons\n\n3️⃣ Confirm order:\nSummarize like this:\nYour order:\n1x [ITEM] – [CURRENCY_SYMBOL][PRICE]\n1x [ITEM] – [CURRENCY_SYMBOL][PRICE]\nDelivery – [CURRENCY_SYMBOL][DELIVERY_FEE]\nTOTAL: [CURRENCY_SYMBOL][TOTAL]\n💳 Pay to: [YOUR_PAYMENT_DETAILS]\nReply \"Paid\" after sending payment\n\n4️⃣ Collect delivery info:\n\"Almost done! Please send:\nFull name\nPhone number (for delivery)\nDelivery address\"\n\n5️⃣ When they send delivery information:\nReply: \"Thank you for providing your details! We're now verifying your order. Please send your payment screenshot for confirmation 😊\"\n\n6️⃣ When they send a payment screenshot:\nReply:\n⌛ Thanks for your payment! Verifying with [YOUR_PAYMENT_PROVIDER]... (2–3 mins) 😊\n(This message happens automatically when payment screenshot is detected)\n\n7️⃣ HUMAN-IN-THE-LOOP DECISION:\nWhen staff approves the payment through the Check Feedback node:\n- The system will automatically send:\n  \"✅ Payment confirmed! Your order will arrive by [deliveryTime] 🚚\"\n  (Delivery time is 1 hour from now, e.g. \"16:45\")\n\n- The system will then automatically log this data to Google Sheets:\n  Format: Order id|Customer Name|Chat ID|Phone Number|Delivery Address|Order info|Total Price|Payment Status|Order Status|Timestamp\n  Example: [PREFIX]-1712345678|John|1085503473|+1234567890|123 Main St|1x Burger|25.00|Confirmed|Preparing|10/07/2024 16:45\n\n8️⃣ If staff rejects the payment:\nReply:\n❌ Sorry, we couldn't verify your payment. Please send a clearer screenshot or try again.\n\n📌 STATUS RESPONSES:\nWhen user types \"Status?\":\n⏳ Still verifying! We'll notify you as soon as it's confirmed 💛\n\nWhen user types \"Agent\":\nConnecting you to @[YOUR_SUPPORT_HANDLE] 💬\n\nWhen user asks for FAQ or information about [YOUR_BUSINESS_NAME]:\n📍 Location: [YOUR_ADDRESS]\n⏰ Hours: [YOUR_HOURS]\n📞 Contact: [YOUR_PHONE]\n📧 Email: [YOUR_EMAIL]\n\n📊 SHEET FORMAT (strict):\nOrder id | Customer Name | Chat ID | Phone Number | Delivery Address | Order info | Total Price | Payment Status | Order Status | Timestamp\nTimestamp format = MM/DD/YYYY HH:MM (24hr [YOUR_TIMEZONE])\n\n## APPROVAL HANDLING\nIf $json.data.text is \"Approved\", then:\n- Calculate the delivery time (1 hour from current time)\n- Send: \"✅ Payment confirmed! Your order will arrive by [deliveryTime] 🚚\"\n- Log the order data to Google Sheets, making sure to include the Chat ID ({{ $json.message.from.id }} or {{ $json.chat.id }})"
+        }
+      },
+      "id": "5c4dc7e6-105f-4696-91ca-85c46f20b3c0",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -272,
+        1104
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}  ",
+        "contextWindowLength": 10
+      },
+      "id": "da8b5024-cfdd-4f2c-a936-26351ab0a5df",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        432,
+        1200
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "b8431cd6-53c7-40d8-9307-b44863879386",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        -704,
+        1184
+      ],
+      "webhookId": "dd966a62-ffb5-4c52-a830-5cf7e96e946a",
+      "typeVersion": 1.1,
+      "credentials": {
+        "telegramApi": {
+          "id": "NGTr59Fm6BqMfgDF",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "[YOUR_GOOGLE_SHEET_ID]",
+          "cachedResultName": "Order Details Sheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "value": {
+            "Chat id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Chat_id', ``, 'string') }}",
+            "Order id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order_id', ``, 'string') }}",
+            "Timestamp": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Timestamp', ``, 'string') }}",
+            "timestamp": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('timestamp', ``, 'string') }}",
+            "Total Price": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Total_Price', ``, 'string') }}",
+            "  Order info": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('__Order_info', ``, 'string') }}",
+            "Order Status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Order_Status', ``, 'string') }}",
+            "phone number": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('phone_number', ``, 'string') }}",
+            "Customer Name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Customer_Name', ``, 'string') }}",
+            "Payment Status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Payment_Status', ``, 'string') }}",
+            "Delivery Address": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Delivery_Address', ``, 'string') }}"
+          },
+          "schema": [
+            {
+              "id": "Order id",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Order id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Name",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Customer Name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Chat id",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Chat id",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Delivery Address",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Delivery Address",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "  Order info",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "  Order info",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Price",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Total Price",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Status",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Payment Status",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order Status",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Order Status",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "Timestamp",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone number",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "phone number",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "timestamp",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4ff37514-4c1e-4046-8988-80d4d01f30ac",
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "position": [
+        544,
+        1200
+      ],
+      "typeVersion": 4.5
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }} ",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a61917cd-07dc-4fc5-9971-4927843dc741",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        48,
+        1104
+      ],
+      "webhookId": "4a058acc-6544-49bc-9981-c484756f0d42",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "NGTr59Fm6BqMfgDF",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.data.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "approved",
+              "description": "admin approves the order"
+            },
+            {
+              "category": "declined",
+              "description": "admin declined the order"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f946176-6a60-4dfa-bc3e-15e9f8b01375",
+      "name": "Check Feedback",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "position": [
+        288,
+        1392
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# Food Delivery Chatbot Template | Ready to Customize",
+        "height": 80,
+        "width": 700,
+        "color": 6
+      },
+      "id": "32df4736-329d-4082-b694-6b2062b28aee",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        144,
+        -400
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-exp",
+        "options": {}
+      },
+      "id": "820f3b0f-6ddb-4ba5-8828-96ec96890890",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        224,
+        1248
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "k0tj3sh3uSROVr36",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "8715295654",
+        "message": "Payment received for order. Approve or decline?",
+        "responseType": "freeText",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b92d86d5-0bb2-4c44-b93a-34dfdfae3aad",
+      "name": "Admin Approval Request",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        48,
+        1392
+      ],
+      "webhookId": "d0ca05e5-391f-4f67-b00f-40e72a5de2aa",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "NGTr59Fm6BqMfgDF",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "8715295654",
+        "file": "={{ $json.message.photo[0].file_id }}",
+        "additionalFields": {
+          "caption": "={{ $('Telegram Trigger').item.json.message.caption }}"
+        }
+      },
+      "id": "a0a2ac27-bff2-4690-98ab-ad10760f58bf",
+      "name": "Forward Payment Screenshot",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        -224,
+        1392
+      ],
+      "webhookId": "e8df6e57-dfef-424b-ac17-d32b8ecddfc8",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "NGTr59Fm6BqMfgDF",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "02d9bd52-4f62-4f32-b0c3-a4723f913b46",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.message.photo[0] }} {{ $json.message.caption }}",
+              "rightValue": ""
+            },
+            {
+              "id": "d50f068a-c563-4a95-a6e6-2e3514028e28",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "e65f1bd6-2511-4d35-8e14-6ff2fd69f72f",
+      "name": "Payment Screenshot Check",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -464,
+        1184
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "❌ Sorry, we couldn't verify your payment. Please send a clearer screenshot or try again.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a88cbd84-3c43-483e-8516-283d9ddc9a43",
+      "name": "Payment Declined",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        672,
+        1392
+      ],
+      "webhookId": "74f30de0-1908-4640-b6c5-13325e770462",
+      "typeVersion": 1.2,
+      "credentials": {
+        "telegramApi": {
+          "id": "NGTr59Fm6BqMfgDF",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Feedback": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Payment Declined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Payment Screenshot Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Approval Request": {
+      "main": [
+        [
+          {
+            "node": "Check Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Check Feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Payment Screenshot Check": {
+      "main": [
+        [
+          {
+            "node": "Forward Payment Screenshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forward Payment Screenshot": {
+      "main": [
+        [
+          {
+            "node": "Admin Approval Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "ce69877c-2fdd-4325-9b81-15edee5332f8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d4e606efcc82e476d5ccebc1c0e0aea12db2a61e3f1c6d31243924a308cb6ebd"
+  },
+  "id": "18T-jJ3ePjyfFUmsrKUpe",
+  "tags": []
+}
